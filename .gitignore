@@ -1,0 +1,5 @@
+*/*
+!*.vhdl
+*.qpf
+*.txt
+*.qsf

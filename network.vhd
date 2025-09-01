@@ -9,78 +9,73 @@ use work.types.all;
 
 entity network is
     generic(
-        inputs : integer := 2;
-        outputs : integer := 1
+        network_weights : network_array
     );
     port(
         clk : in std_logic;
         rst : in std_logic;
         start_i : in std_logic;
-        input_i : in sfixed_bus_array(inputs - 1 downto 0);
-        output_o : out sfixed_bus_array(outputs - 1 downto 0) := (others => (others => '0')); -- Network input
-        done_o : out std_logic -- Done output, indicates completion
+        input_i : in sfixed_bus_array(network_weights(network_weights'low)(0)'length - 2 downto 0);
+        output_o : out sfixed_bus_array(network_weights(network_weights'high)'length - 1 downto 0);
+        done_o : out std_logic
     );
 end entity network;
 
-architecture n_xor of network is
-    signal output_n1 : sfixed_bus;
-    signal output_n2 : sfixed_bus;
-    signal done_n1 : std_logic;
-    signal done_n2 : std_logic;
-    signal start_n3 : std_logic;
-    signal output_s : sfixed_bus_array(outputs - 1 downto 0);
-    signal input_n3 : sfixed_bus_array(inputs - 1 downto 0);
-    constant weight_n1 : sfixed_bus_array(inputs downto 0) := (( to_sfixed_a(-1.5) ),
-                                                                ( to_sfixed_a(1) ) ,
-                                                                ( to_sfixed_a(1) ) ) ;
-    constant weight_n2 : sfixed_bus_array(inputs downto 0) := (( to_sfixed_a(-0.5) ),
-                                                                ( to_sfixed_a(1) ) ,
-                                                                ( to_sfixed_a(1) ) ) ;
-    constant weight_n3 : sfixed_bus_array(inputs downto 0) := (( to_sfixed_a(-0.5) ),
-                                                                ( to_sfixed_a(-2) ),
-                                                                ( to_sfixed_a(1) ) ) ;
-begin
-    n1 : entity work.neuron
-        generic map(
-            inputs => inputs
-        )
-        port map(
-            clk => clk,
-            rst => rst,
-            start_i => start_i,
-            input_i => input_i,
-            weight_i => weight_n1,
-            output_o => output_n1,
-            done_o => done_n1
-        );
-    n2 : entity work.neuron
-        generic map(
-            inputs => inputs
-        )
-        port map(
-            clk => clk,
-            rst => rst,
-            start_i => start_i,
-            input_i => input_i,
-            weight_i => weight_n2,
-            output_o => output_n2,
-            done_o => done_n2
-        );
-    n3 : entity work.neuron
-        generic map(
-            inputs => inputs
-        )
-        port map(
-            clk => clk,
-            rst => rst,
-            start_i => start_n3,
-            input_i => input_n3,
-            weight_i => weight_n3,
-            output_o => output_s(0),
-            done_o => done_o
-        );
-    input_n3 <= ((output_n1), (output_n2));
-    start_n3 <= done_n1 and done_n2;
-    output_o <= output_s;
+architecture generic_arch of network is
+    constant num_layers : integer := network_weights'length;
+    constant input_size : integer := input_i'length;
+    constant output_size : integer := output_o'length;
 
-end architecture n_xor;
+    -- type layer_outputs_array is array (0 to num_layers) of sfixed_bus_array(0 to NUM_LAYERS);
+    type layer_outputs_array is array (0 to num_layers) of sfixed_bus_array(0 to 100); -- 100 é um placeholder, sera limitada pelo numero de camadas.
+    type layer_done_array is array (integer range <>) of std_logic_vector(integer range <>);
+
+    signal layer_outputs : layer_outputs_array;
+    -- signal layer_done : layer_done_array(0 to num_layers - 1)(0 to num_layers);
+    signal layer_done : layer_done_array(0 to num_layers - 1)(0 to 100);  -- 100 é um placeholder, sera limitada pelo numero de camadas.
+    signal layer_start : std_logic_vector(0 to num_layers - 1);
+    
+begin
+    
+    layer_outputs(0)(input_size - 1 downto 0) <= input_i;
+    layer_start(0) <= start_i;
+    
+    gen_layers : for L in 0 to num_layers - 1 generate
+        constant neurons_in_layer : integer := network_weights(L)'length;
+        constant inputs_per_neuron : integer := network_weights(L)(0)'length - 1;
+    begin
+        gen_neurons : for N in 0 to neurons_in_layer - 1 generate
+            neuron_inst : entity work.neuron
+                generic map(
+                    inputs => inputs_per_neuron
+                )
+                port map(
+                    clk => clk,
+                    rst => rst,
+                    start_i => layer_start(L),
+                    input_i => layer_outputs(L)(inputs_per_neuron - 1 downto 0),
+                    weight_i => network_weights(L)(N),
+                    output_o => layer_outputs(L + 1)(N),
+                    done_o => layer_done(L)(N)
+                );
+        end generate gen_neurons;
+
+        process(layer_done)
+            variable all_done : std_logic;
+        begin
+            all_done := '1';
+            for i in 0 to neurons_in_layer - 1 loop
+                all_done := all_done and layer_done(L)(i);
+            end loop;
+
+            if L < num_layers - 1 then
+                layer_start(L + 1) <= all_done;
+            else
+                done_o <= all_done;
+            end if;
+        end process;
+    end generate gen_layers;
+
+    output_o <= layer_outputs(num_layers)(output_size - 1 downto 0);
+
+end architecture generic_arch;

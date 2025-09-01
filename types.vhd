@@ -22,6 +22,10 @@ package types is
     subtype sfixed_bus is sfixed(int - 1 downto - frac);
     type sfixed_bus_array is array (integer range <>) of sfixed_bus;
 
+    -- Adding array types for layer array and network array.
+    type layer_array is array (integer range <>) of sfixed_bus_array;
+    type network_array is array (integer range <>) of layer_array;
+
     -- Real type extension
     
     type real_array is array (integer range <>) of real; -- Array of real
