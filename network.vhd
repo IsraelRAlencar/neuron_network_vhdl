@@ -47,9 +47,7 @@ architecture generic_arch of network is
     signal neuron_start : T_CONTROL_SIGNALS := (others => (others => '0'));
     signal neuron_done : T_CONTROL_SIGNALS;
 
-    type T_NETWORK_STATE is (IDLE, START_LAYER, WAIT_LAYER, FINISH);
-    signal network_state : T_NETWORK_STATE := IDLE;
-    signal layer_counter : integer range 0 to num_layers - 1 := 0;
+    signal layer_all_done : std_logic_vector(0 to num_layers - 1) := (others => '0');
 
     pure function get_layer_start_offset(layer_idx : integer) return integer is
         variable offset : integer := 0;
@@ -76,63 +74,29 @@ architecture generic_arch of network is
     end function get_num_inputs;
 
 begin
-    network_fsm_proc : process(clk, rst)
-        variable all_done : boolean;
-    begin
-        if rst = '1' then
-            network_state <= IDLE;
-            layer_counter <= 0;
-            done_o <= '0';
-        elsif rising_edge(clk) then
-            case network_state is
-                when IDLE =>
-                    done_o <= '0';
-                    if start_i = '1' then
-                        layer_counter <= 0;
-                        network_state <= START_LAYER;
-                    end if;
-                    
-                when START_LAYER =>
-                    for j in 0 to max_neurons_in_layer - 1 loop
-                        if j < neurons_per_layer(layer_counter) then
-                            neuron_start(layer_counter, j) <= '1';
-                        end if;
-                    end loop;
-                    network_state <= WAIT_LAYER;
-                    
-                when WAIT_LAYER =>
-                    for j in 0 to max_neurons_in_layer - 1 loop
-                        if j < neurons_per_layer(layer_counter) then
-                            neuron_start(layer_counter, j) <= '0';
-                        end if;
-                    end loop;
+    gen_layer_done : for i in 0 to num_layers - 1 generate
+        layer_done_proc : process(neuron_done)
+            variable v_all_done : std_logic := '1';
+        begin
+            for j in 0 to neurons_per_layer(i) - 1 loop
+                v_all_done := v_all_done and neuron_done(i, j);
+            end loop;
+            layer_all_done(i) <= v_all_done;
+        end process layer_done_proc;
+    end generate gen_layer_done;
 
-                    all_done := true;
-                    for j in 0 to max_neurons_in_layer - 1 loop
-                        if j < neurons_per_layer(layer_counter) then
-                            if neuron_done(layer_counter, j) = '0' then
-                                all_done := false;
-                            end if;
-                        end if;
-                    end loop;
+    gen_start_control : for i in 0 to num_layers - 1 generate
+        gen_neuron_start : for j in 0 to max_neurons_in_layer - 1 generate
+            gen_start_layer_0 : if i = 0 generate
+                neuron_start(i, j) <= start_i;
+            end generate gen_start_layer_0;
 
-                    if all_done then
-                        if layer_counter = num_layers - 1 then
-                            network_state <= FINISH;
-                        else
-                            layer_counter <= layer_counter + 1;
-                            network_state <= START_LAYER;
-                        end if;
-                    end if;
-                    
-                when FINISH =>
-                    done_o <= '1';
-                    if start_i = '0' then
-                        network_state <= IDLE;
-                    end if;
-            end case;
-        end if;
-    end process network_fsm_proc;
+            gen_start_layer_n : if i > 0 generate
+                neuron_start(i, j) <= layer_all_done(i - 1);
+            end generate gen_start_layer_n;
+
+        end generate gen_neuron_start;
+    end generate gen_start_control;
 
     gen_layers : for i in 0 to num_layers - 1 generate
         constant num_neurons_in_this_layer : integer := neurons_per_layer(i);
@@ -183,5 +147,6 @@ begin
     end generate gen_layers;
 
     output_o <= layer_outputs(num_layers - 1)(output_o'range);
+    done_o <= layer_all_done(num_layers - 1);
 
 end architecture generic_arch;
