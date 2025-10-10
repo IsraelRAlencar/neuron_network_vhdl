@@ -21,12 +21,41 @@ end entity network_top;
 architecture wrapper of network_top is
 
     constant INPUT_SIZE_C        : integer := 2;
-    constant NEURONS_PER_LAYER_C : integer_array(0 to 1) := (2, 1);
+    constant NEURONS_PER_LAYER_C : integer_array(0 to 2) := (3, 2, 1);
     
-    constant WEIGHTS_C : sfixed_bus_array(0 to 8) := (
-        to_sfixed_a(1.0), to_sfixed_a(1.0), to_sfixed_a(-1.5), 
-        to_sfixed_a(1.0), to_sfixed_a(1.0), to_sfixed_a(-0.5),
-        to_sfixed_a(-2.0), to_sfixed_a(1.0), to_sfixed_a(-0.5)
+    constant WEIGHTS_C : sfixed_bus_array(0 to 19) := (  -- (2,2,1) é 8   (3, 2, 1) é 19
+        --to_sfixed_a(1.0), to_sfixed_a(1.0), to_sfixed_a(-1.5), 
+        --to_sfixed_a(1.0), to_sfixed_a(1.0), to_sfixed_a(-0.5),
+        --to_sfixed_a(-2.0), to_sfixed_a(1.0), to_sfixed_a(-0.5)
+        
+        --to_sfixed_a(-1.5), to_sfixed_a(1.0), to_sfixed_a(1.0),
+        --to_sfixed_a(-0.5), to_sfixed_a(1.0), to_sfixed_a(1.0),
+        --to_sfixed_a(-0.5), to_sfixed_a(1.0), to_sfixed_a(-2.0)
+        
+        --------------------- (2, 2, 1) -----------------------
+        -- Hidden N1
+        --to_sfixed_a(-1.5), to_sfixed_a(1.0), to_sfixed_a(1.0),
+        -- Hidden N2
+        --to_sfixed_a(-0.5), to_sfixed_a(1.0), to_sfixed_a(1.0),
+        -- Output Nout
+        --to_sfixed_a(-0.5), to_sfixed_a(-2.0), to_sfixed_a(1.0)
+        
+        ---------------------- (3, 2, 1) -----------------------
+        -- Layer 0, Neuron 0 (bias, w0, w1)
+        to_sfixed_a(-1.5), to_sfixed_a(1.0), to_sfixed_a(1.0),
+        -- Layer 0, Neuron 1
+        to_sfixed_a(-0.5), to_sfixed_a(1.0), to_sfixed_a(1.0),
+        -- Layer 0, Neuron 2
+        to_sfixed_a(0.0),  to_sfixed_a(0.0), to_sfixed_a(0.0),
+
+        -- Layer 1, Neuron 0 (bias, w_h0, w_h1, w_h2) -> passa h0
+        to_sfixed_a(0.0),  to_sfixed_a(1.0), to_sfixed_a(0.0), to_sfixed_a(0.0),
+        -- Layer 1, Neuron 1 -> passa h1
+        to_sfixed_a(0.0),  to_sfixed_a(0.0), to_sfixed_a(1.0), to_sfixed_a(0.0),
+
+        -- Layer 2 (saída), Neuron 0 (bias, w_h10, w_h11)
+        to_sfixed_a(-0.5), to_sfixed_a(-2.0), to_sfixed_a(1.0)
+        
     );
 
 begin
