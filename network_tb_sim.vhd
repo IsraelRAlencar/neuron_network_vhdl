@@ -91,7 +91,7 @@ begin
     y := binarize(output_s(0));
     assert y = '1' report "Falha para (1,0)" severity warning;
 
-    -- 11 -> esperado 0
+    -- 11 -> esperado 00
     apply_vec(1.0, 1.0);
     y := binarize(output_s(0));
     assert y = '0' report "Falha para (1,1)" severity warning;
