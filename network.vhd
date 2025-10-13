@@ -1,6 +1,7 @@
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
+use ieee.std_logic_misc.all;
 
 library ieee_proposed;
 use ieee_proposed.fixed_pkg.all;
@@ -74,16 +75,18 @@ architecture generic_arch of network is
     end function get_num_inputs;
 
 begin
-    gen_layer_done : for i in 0 to num_layers - 1 generate
-        layer_done_proc : process(neuron_done)
-            variable v_all_done : std_logic := '1';
-        begin
-            for j in 0 to neurons_per_layer(i) - 1 loop
-                v_all_done := v_all_done and neuron_done(i, j);
-            end loop;
-            layer_all_done(i) <= v_all_done;
-        end process layer_done_proc;
-    end generate gen_layer_done;
+		--alteracao
+      gen_layer_done : for i in 0 to num_layers - 1 generate
+		  layer_done_proc : process(all)
+			 variable v_all_done : std_logic;
+		  begin
+			 v_all_done := '1';  
+			 for j in 0 to neurons_per_layer(i) - 1 loop
+				v_all_done := v_all_done and neuron_done(i, j);
+			 end loop;
+			 layer_all_done(i) <= v_all_done;
+		  end process;
+		end generate;
 
     gen_start_control : for i in 0 to num_layers - 1 generate
         gen_neuron_start : for j in 0 to max_neurons_in_layer - 1 generate
@@ -112,7 +115,7 @@ begin
             constant end_weight_index : integer := start_weight_index + weights_per_neuron - 1;
         begin
 
-            gen_input_wiring : if i = 0 generate
+            gen_input_wiring_0 : if i = 0 generate
                 neuron_inst : entity work.neuron
                     generic map (
                         inputs => num_inputs_this_layer
@@ -126,7 +129,9 @@ begin
                         output_o => layer_outputs(i)(j),
                         done_o => neuron_done(i, j)
                     );
-            else generate
+            end generate gen_input_wiring_0;
+            
+            gen_input_wiring_n : if i > 0 generate
                 neuron_inst : entity work.neuron
                     generic map (
                         inputs => num_inputs_this_layer
@@ -140,7 +145,7 @@ begin
                         output_o => layer_outputs(i)(j),
                         done_o => neuron_done(i, j)
                     );
-            end generate gen_input_wiring;
+            end generate gen_input_wiring_n;
             
         end generate gen_neurons;
         
