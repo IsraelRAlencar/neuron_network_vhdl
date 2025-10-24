@@ -22,7 +22,7 @@ architecture tb of network_tb is
 
   constant Tclk : time := 10 ns;
 
-  -- Ajuste conforme sua ativação (tanh -> threshold 0.0; sigmoide 0..1 -> 0.5)
+  -- Ajuste conforme sua ativaÃ§Ã£o (tanh -> threshold 0.0; sigmoide 0..1 -> 0.5)
   function binarize(y : sfixed) return std_logic is
   begin
     if to_real(y) > 0.5 then
@@ -46,6 +46,19 @@ begin
       output_o=> output_s,
       done_o  => done_s
     );
+    
+    y_bit <= '1' when output_s(0) > to_sfixed_a(0.5) else '0';
+    
+    sample_proc: process(clk)
+    begin
+     if rising_edge(clk) then
+       if rst = '1' then
+          y_bit_sampled <= '0';
+        elsif done_s = '1' then
+          y_bit_sampled <= y_bit;
+        end if;
+      end if;
+    end process;
 
   stim: process
     -- Procedure local (pode ter waits e dirigir sinais normalmente)
@@ -63,14 +76,6 @@ begin
       wait for Tclk;
     end procedure;
     variable y : std_logic;
-    
-    if rising_edge(clk) then
-      if rst = '1' then
-        y_bit_sampled <= '0';
-      elsif done_s = '1' then
-        y_bit_sampled <= y_bit;
-      end if;
-    end if;
 
   begin
     -- Aguarda sair de reset
@@ -100,3 +105,5 @@ begin
     wait;
   end process;
 end architecture;
+
+
