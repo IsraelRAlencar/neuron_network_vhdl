@@ -102,6 +102,7 @@ begin
     end generate gen_start_control;
 
     gen_layers : for i in 0 to num_layers - 1 generate
+        constant is_last_layer : boolean := (i = num_layers - 1);
         constant num_neurons_in_this_layer : integer := neurons_per_layer(i);
         
         constant num_inputs_this_layer : integer := get_num_inputs(i);
@@ -118,7 +119,8 @@ begin
             gen_input_wiring_0 : if i = 0 generate
                 neuron_inst : entity work.neuron
                     generic map (
-                        inputs => num_inputs_this_layer
+                        inputs => num_inputs_this_layer,
+                        use_threshold => is_last_layer
                     )
                     port map (
                         clk => clk,
@@ -134,7 +136,8 @@ begin
             gen_input_wiring_n : if i > 0 generate
                 neuron_inst : entity work.neuron
                     generic map (
-                        inputs => num_inputs_this_layer
+                        inputs => num_inputs_this_layer,
+                        use_threshold => is_last_layer
                     )
                     port map (
                         clk => clk,
@@ -155,3 +158,4 @@ begin
     done_o <= layer_all_done(num_layers - 1);
 
 end architecture generic_arch;
+

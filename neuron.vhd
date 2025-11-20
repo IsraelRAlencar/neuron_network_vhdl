@@ -15,7 +15,8 @@ use work.types.all;
 
 entity neuron is
     generic (
-        inputs : integer := 3 --Number of inputs into the neuron
+        inputs : integer := 3; --Number of inputs into the neuron
+        use_threshold : boolean := false --será true apenas na ultima camada
     );
     port (
         clk   : in std_logic;
@@ -45,7 +46,7 @@ begin
     begin
         /* -- Sintaxe incorreta
         if rising_edge(clk) then
-         if rst = ’1’ then
+         if rst = â1â then
             current_state <= idle ;
         elsif rising_edge(clk) then
             current_state <= next_state;
@@ -54,10 +55,11 @@ begin
 
         --Synchronous reset result in better performance because of multiplier blocks and RAM registers infered
         if rising_edge(clk) then
-            if rst = '1' then
-                current_state <= idle;
-            end if;
-            current_state <= next_state;
+          if rst = '1' then
+            current_state <= idle;
+          else
+           current_state <= next_state;
+          end if;
         end if;
     end process fsm_lower;
 
@@ -103,12 +105,24 @@ begin
     --         input_i => act_func_input,
     --         output_o => output_s
     --     );
-    act_func_inst : entity work.act_func
+    -- Seleção da ativação
+    act_relu_g : if not use_threshold generate
+      act_func_inst : entity work.act_func(relu)
         port map(
-            clk => clk,
-            input_i => act_func_input,
-            output_o => output_s
+         clk     => clk,
+          input_i => act_func_input,
+         output_o=> output_s
         );
+    end generate;
+
+    act_thr_g : if use_threshold generate
+    	 act_func_inst : entity work.act_func(threshold)
+       port map(
+         clk     => clk,
+          input_i => act_func_input,
+         output_o=> output_s
+        );
+    end generate;
 
     done_o <= done_s;
     output_o <= output_s;
